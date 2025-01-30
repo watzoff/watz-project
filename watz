@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Блог с регистрацией</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .form-section {
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .post {
+            border: 1px solid #eee;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- Форма регистрации -->
+    <div class="form-section" id="registerForm">
+        <h2>Регистрация</h2>
+        <input type="text" id="regUsername" placeholder="Логин">
+        <input type="password" id="regPassword" placeholder="Пароль">
+        <button onclick="register()">Зарегистрироваться</button>
+    </div>
+
+    <!-- Форма входа -->
+    <div class="form-section" id="loginForm">
+        <h2>Вход</h2>
+        <input type="text" id="loginUsername" placeholder="Логин">
+        <input type="password" id="loginPassword" placeholder="Пароль">
+        <button onclick="login()">Войти</button>
+    </div>
+
+    <!-- Создание поста (видно после входа) -->
+    <div class="form-section hidden" id="createPostSection">
+        <h2>Новый пост</h2>
+        <input type="text" id="postTitle" placeholder="Заголовок">
+        <textarea id="postContent" placeholder="Текст поста"></textarea>
+        <button onclick="createPost()">Опубликовать</button>
+    </div>
+
+    <!-- Поиск -->
+    <div class="form-section">
+        <input type="text" id="searchInput" placeholder="Поиск по постам..." onkeyup="searchPosts()">
+    </div>
+
+    <!-- Список постов -->
+    <div id="posts"></div>
+
+<script>
+// Хранилище (localStorage)
+let users = JSON.parse(localStorage.getItem('users')) || [];
+let posts = JSON.parse(localStorage.getItem('posts')) || [];
+let currentUser = null;
+
+// Регистрация
+function register() {
+    const username = document.getElementById('regUsername').value;
+    const password = document.getElementById('regPassword').value;
+    
+    if (users.some(u => u.username === username)) {
+        alert('Пользователь уже существует!');
+        return;
+    }
+    
+    users.push({ username, password });
+    localStorage.setItem('users', JSON.stringify(users));
+    alert('Регистрация успешна!');
+}
+
+// Вход
+function login() {
+    const username = document.getElementById('loginUsername').value;
+    const password = document.getElementById('loginPassword').value;
+    
+    const user = users.find(u => u.username === username && u.password === password);
+    if (!user) {
+        alert('Неверные данные!');
+        return;
+    }
+    
+    currentUser = username;
+    document.getElementById('createPostSection').classList.remove('hidden');
+    document.getElementById('registerForm').classList.add('hidden');
+    document.getElementById('loginForm').classList.add('hidden');
+    renderPosts();
+}
+
+// Создание поста
+function createPost() {
+    const title = document.getElementById('postTitle').value;
+    const content = document.getElementById('postContent').value;
+    
+    posts.push({
+        id: Date.now(),
+        title,
+        content,
+        author: currentUser,
+        comments: [],
+        date: new Date().toLocaleString()
+    });
+    
+    localStorage.setItem('posts', JSON.stringify(posts));
+    renderPosts();
+}
+
+// Добавление комментария
+function addComment(postId) {
+    const text = document.getElementById(`commentText-${postId}`).value;
+    
+    const post = posts.find(p => p.id === postId);
+    post.comments.push({
+        author: currentUser || 'Гость',
+        text,
+        date: new Date().toLocaleString()
+    });
+    
+    localStorage.setItem('posts', JSON.stringify(posts));
+    renderPosts();
+}
+
+// Поиск постов
+function searchPosts() {
+    const query = document.getElementById('searchInput').value.toLowerCase();
+    renderPosts(query);
+}
+
+// Отображение постов
+function renderPosts(searchQuery = '') {
+    const filteredPosts = posts.filter(post => 
+        post.title.toLowerCase().includes(searchQuery) ||
+        post.content.toLowerCase().includes(searchQuery)
+    );
+
+    const postsDiv = document.getElementById('posts');
+    postsDiv.innerHTML = filteredPosts.map(post => `
+        <div class="post">
+            <h3>${post.title} <small>(${post.author})</small></h3>
+            <p>${post.content}</p>
+            <div class="comments">
+                ${post.comments.map(comment => `
+                    <div class="comment">
+                        <p><strong>${comment.author}:</strong> ${comment.text}</p>
+                    </div>
+                `).join('')}
+            </div>
+            <input type="text" id="commentText-${post.id}" placeholder="Ваш комментарий">
+            <button onclick="addComment(${post.id})">Добавить комментарий</button>
+        </div>
+    `).join('');
+}
+
+// Инициализация
+document.getElementById('loginForm').classList.remove('hidden');
+</script>
+</body>
+</html>
